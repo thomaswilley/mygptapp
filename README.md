@@ -2,6 +2,8 @@
 
 A simple desktop app for chatgpt which uses your own api key and has no other dependencies.
 
+![mygptapp screenshot](./src/assets/screenshot.png)
+
 Dependencies:
 - nodejs & npm
 - tailwindcss
