@@ -11,6 +11,7 @@ Dependencies:
 
 Installation:
 - git clone this repo
+- copy and rename mygpt.conf.example to mygpt.conf, and replace username and api_key in mygpt.conf
 ```bash
 $ cargo tauri dev
 ```
