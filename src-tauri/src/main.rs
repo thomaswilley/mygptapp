@@ -1,12 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::borrow::BorrowMut;
 use std::sync::Mutex;
-
+use std::thread::current;
 use mygpt::openai::OpenAI;
 use mygpt::config::{self, GeneralConfig, OpenAiConfig};
-use mygpt::gpterror::GPTError;
 
 struct MyGPTApp {
     mygpt: Mutex<Option<OpenAI>>,
@@ -26,9 +24,9 @@ impl MyGPTApp {
         }
     }
 
-    pub fn get_current_path() -> String {
-        let full_path = std::fs::canonicalize("./").unwrap();
-        full_path.to_string_lossy().to_string()
+    pub fn get_current_path(&self) -> String {
+        let full_path = std::fs::canonicalize("./mygpt.conf").unwrap();
+        full_path.to_string_lossy().to_string().into()
     }
 }
 
@@ -52,39 +50,16 @@ fn get_config(mygpt: tauri::State<'_, MyGPTApp>) -> Result<config::Config, Strin
     }
 }
 
-/*
 #[tauri::command]
-fn get_config(mygpt: tauri::State<'_, MyGPTApp>) -> config::Config {
-    match &mygpt.mygpt {
-        Some(mygpt) => mygpt.config.clone(),
-        None => {
-            config::Config {
-                general: Some(GeneralConfig { username: Some("".into()) }),
-                openai: OpenAiConfig { api_key: "".into() },
-            }
-        }
-    }
-}
-*/
-
-/*
-#[tauri::command]
-fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config:config::Config) -> config::Config {
-    // if the returned matches the provided, it wasn't saved.
-    match &mygpt.mygpt {
-        Some(mygpt_ref) => {
-            let mut mygpt = mygpt_ref.borrow_mut();
-            //mygpt.config = new_config.clone(); 
-            mygpt.config.clone()
-        },
-        None => new_config,
-    }
-}
-*/
-
-#[tauri::command]
-fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) -> Result<config::Config, String> {
+fn get_config_path(mygpt: tauri::State<'_, MyGPTApp>) -> Result<String, String> {
     let lock = mygpt.mygpt.lock();
+    Ok(mygpt.get_current_path().clone())
+}
+
+#[tauri::command]
+fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) -> Result<String, String> {
+    let lock = mygpt.mygpt.lock();
+    let current_path = mygpt.get_current_path().clone();
 
     match lock {
         Ok(mut guard) => {
@@ -92,6 +67,7 @@ fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) ->
                 Some(ref mut openai) => {
                     // If OpenAI instance exists, just update its config
                     openai.config = new_config.clone();
+                    openai.config.save(Some(current_path.as_str()))?; 
                 },
                 None => {
                     return Err("mygpt instance doesnt exist".into());
@@ -106,7 +82,7 @@ fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) ->
             }
 
             // Return the new config
-            Ok(new_config)
+            Ok(current_path)
         },
         Err(_) => Err("Mutex was poisoned.".into())
     }
@@ -159,7 +135,7 @@ async fn generate_dummy_response(mygpt: tauri::State<'_, MyGPTApp>, prompt: Stri
 fn main() {
     tauri::Builder::default()
         .manage(MyGPTApp::new("./mygpt.conf".into()))
-        .invoke_handler(tauri::generate_handler![generate_response, generate_dummy_response, get_config, save_config])
+        .invoke_handler(tauri::generate_handler![generate_response, generate_dummy_response, get_config, save_config, get_config_path])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

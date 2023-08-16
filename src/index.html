@@ -7,11 +7,11 @@
   <script type="module" src="/main.js" defer></script>
   <script type="module" src="/js/conf.js" defer></script>
   <link rel="stylesheet" type="text/css" href="styles.css">
-<style>
-  .ml-scrollbar {
-    margin-right: 16px;
-  }
-</style>
+  <style>
+    .ml-scrollbar {
+      margin-right: 16px;
+    }
+  </style>
 </head>
 
 <body class="bg-slate-800">
@@ -56,9 +56,8 @@
       </div>
     </form>
     <div class="px-3 pb-1 pt-2 text-center text-xs text-gray-600 dark:text-gray-300 md:px-4 md:pb-3 md:pt-3">
-      <span>ChatGPT
-        may produce inaccurate information about people, places, or facts. <a href="https://help.openai.com/"
-          target="_blank" rel="noreferrer" class="underline">ChatGPT</a></span>
+      <span><a href="https://help.openai.com/" target="_blank" rel="noreferrer" class="underline">ChatGPT</a> may produce
+        inaccurate information about people, places, or facts.</span>
     </div>
   </div>
 
@@ -131,6 +130,9 @@
                   </div>
                 </form>
               </div>
+              <div class="px-2 pl-4 pt-4 mb-0">
+                <input class="border-0 w-full text-sm font-medium leading-6 text-gray-500 bg-transparent" type="text" disabled name="config_path" id="config_path">
+              </div>
             </div>
           </div>
         </div>
@@ -138,6 +140,37 @@
     </div>
   </div>
 
+  <div aria-live="assertive" class="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6">
+    <div class="flex w-full flex-col items-center space-y-4 sm:items-end">
+      <div id="alert_error"
+        class="hidden pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+        <div class="p-4">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div class="ml-3 w-0 flex-1 pt-0.5">
+              <p id="alert_error_message" class="text-sm font-medium text-gray-900">Successfully saved!</p>
+              <p id="alert_error_detail" class="mt-1 text-sm text-gray-500">Anyone with a link can now view this file.
+              </p>
+            </div>
+            <div class="ml-4 flex flex-shrink-0">
+              <button type="button" @click="show = false; setTimeout(() => show = true, 1000)"
+                class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <span class="sr-only">Close</span>
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

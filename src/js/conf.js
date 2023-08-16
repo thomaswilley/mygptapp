@@ -1,4 +1,5 @@
 const { invoke } = window.__TAURI__.tauri;
+import { AlertError } from "/js/alerts.js";
 
 export function openSettings() {
     var modal = document.querySelector('#modal');
@@ -7,18 +8,24 @@ export function openSettings() {
 
 export async function loadSettings() {
     var settings = await invoke("get_config");
+    let config_path = await invoke("get_config_path");
     let openai__api_key = settings?.openai?.api_key || '';
     let general__username = settings?.general?.username || '';
 
     document.getElementById('openai__api_key').value = openai__api_key;
     document.getElementById('general__username').value = general__username;
+    document.getElementById('config_path').value = config_path;
     return settings;
 }
 
 export async function saveSettings(newSettings) {
     console.log('new settings', newSettings);
-    var savedSettings = await invoke("save_config", { newConfig: newSettings }).catch((e)=>console.log(e));
-    console.log('saved settings', savedSettings);
+    var savedSettings = await invoke("save_config", { newConfig: newSettings }).catch((e)=>{
+        AlertError('Unable to save settings', e);
+    });
+    if (savedSettings) {
+        console.log('saved settings', savedSettings);
+    }
 }
 
 export function toggleSettingsVisibility() {

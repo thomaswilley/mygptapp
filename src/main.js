@@ -1,5 +1,6 @@
 const { invoke } = window.__TAURI__.tauri;
 import { loadSettings } from "/js/conf.js";
+import { hideNotification } from "/js/alerts.js";
 
 let promptTextareaEl;
 let chatHistoryEl;
@@ -95,6 +96,20 @@ window.addEventListener("DOMContentLoaded", () => {
     autoResize(this);
     updateSubmitUI();
   }, false);
+
+  // wire up alerts.js
+  let notifs = ['alert_error', ];
+  notifs.map(notif => {
+    let elNotif = document.querySelector(`#${notif}`);
+    if (elNotif) {
+      let elBtn = elNotif.querySelector('button[type=button]');
+      if (elBtn) {
+        elBtn.addEventListener('click', () => {
+          hideNotification(elNotif);
+        })
+      }
+    }
+  })
 });
 
 function parseMyGPTResponse(response) {
