@@ -2,12 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::Mutex;
-use std::thread::current;
-use mygpt::openai::OpenAI;
+use mygpt::gpterror::GPTError;
+use mygpt::openai::{ OpenAI, ModelInfo, ModelInfoMessage };
 use mygpt::config::{self, GeneralConfig, OpenAiConfig};
+use tauri::api::path::app_data_dir;
 
 struct MyGPTApp {
     mygpt: Mutex<Option<OpenAI>>,
+    config_path: String,
 }
 
 impl MyGPTApp {
@@ -21,12 +23,8 @@ impl MyGPTApp {
     
         MyGPTApp {
             mygpt,
+            config_path,
         }
-    }
-
-    pub fn get_current_path(&self) -> String {
-        let full_path = std::fs::canonicalize("./mygpt.conf").unwrap();
-        full_path.to_string_lossy().to_string().into()
     }
 }
 
@@ -53,13 +51,12 @@ fn get_config(mygpt: tauri::State<'_, MyGPTApp>) -> Result<config::Config, Strin
 #[tauri::command]
 fn get_config_path(mygpt: tauri::State<'_, MyGPTApp>) -> Result<String, String> {
     let lock = mygpt.mygpt.lock();
-    Ok(mygpt.get_current_path().clone())
+    Ok(mygpt.config_path.clone())
 }
 
 #[tauri::command]
 fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) -> Result<String, String> {
     let lock = mygpt.mygpt.lock();
-    let current_path = mygpt.get_current_path().clone();
 
     match lock {
         Ok(mut guard) => {
@@ -67,7 +64,7 @@ fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) ->
                 Some(ref mut openai) => {
                     // If OpenAI instance exists, just update its config
                     openai.config = new_config.clone();
-                    openai.config.save(Some(current_path.as_str()))?; 
+                    openai.config.save(Some(mygpt.config_path.as_str()))?;
                 },
                 None => {
                     return Err("mygpt instance doesnt exist".into());
@@ -82,7 +79,7 @@ fn save_config(mygpt: tauri::State<'_, MyGPTApp>, new_config: config::Config) ->
             }
 
             // Return the new config
-            Ok(current_path)
+            Ok(mygpt.config_path.clone())
         },
         Err(_) => Err("Mutex was poisoned.".into())
     }
@@ -100,7 +97,13 @@ async fn generate_response(mygpt: tauri::State<'_, MyGPTApp>, prompt: String) ->
         None => return Err("No instance exists. Check config file.".into()),
     };
 
-    match mygpt.immutable_get_response(prompt, None).await {
+    let model_info = ModelInfo {
+        model: "gpt-4".into(),
+        messages: vec![ModelInfoMessage::new("system".into(), "".into())],
+        temperature: 0.5,
+    };
+
+    match mygpt.immutable_get_response(prompt, Some(model_info)).await {
         Ok(response) => Ok(response),
         Err(e) => Err(e.into()),
     }
@@ -120,7 +123,7 @@ async fn generate_dummy_response(mygpt: tauri::State<'_, MyGPTApp>, prompt: Stri
             }
         ],
         "created": 1689267410,
-        "id": "chatcmpl-7btuU2VRnKdadz1SYBcnA3ux9Cv8l",
+        "id": "chatcmpl-7btuU2VRZZKd4dz1SYBcnA3ux9Cv8l",
         "model": "gpt-3.5-turbo-0613",
         "object": "chat.completion",
         "usage": {
@@ -132,10 +135,30 @@ async fn generate_dummy_response(mygpt: tauri::State<'_, MyGPTApp>, prompt: Stri
     Ok(response.into())
 }
 
-fn main() {
+fn main() -> Result<(),GPTError> {
+    let config = tauri::Config::default(); 
+    let config_base_dir= tauri::api::path::app_config_dir(&config).ok_or(GPTError::Other("cant load config".into()))?;
+
+    let config_dir = config_base_dir.join("mygptapp");
+    if !config_dir.exists() {
+        std::fs::create_dir(&config_dir)?;
+    }
+
+    let config_path = config_dir.join("mygpt.conf");
+
+    if !config_path.exists() {
+        let cfg = config::Config {
+            general: Some(GeneralConfig { username: Some("user".into()) }),
+            openai: OpenAiConfig { api_key: "your-key-here".into() }
+        };
+        cfg.save(Some(&config_path.display().to_string().as_str()))?;
+    }
+
     tauri::Builder::default()
-        .manage(MyGPTApp::new("./mygpt.conf".into()))
+        .manage(MyGPTApp::new(config_path.display().to_string()))
         .invoke_handler(tauri::generate_handler![generate_response, generate_dummy_response, get_config, save_config, get_config_path])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    Ok(())
 }
